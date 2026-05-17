@@ -52,7 +52,7 @@ export default async function handler(req, res) {
   try {
     const { error } = await resend.emails.send({
       from: 'onboarding@resend.dev',
-      to: ['gusgeremia@gmail.com'],
+      to: ['ted.selker@gmail.com'],
       replyTo: email,
       subject,
       text,
