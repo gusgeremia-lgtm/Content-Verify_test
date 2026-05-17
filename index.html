@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Content-Verify — Seeing both sides of what you read</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    :root {
+      --ink:    #1c1917;
+      --ink-2:  #57534e;
+      --ink-3:  #a8a29e;
+      --paper:  #faf9f7;
+      --white:  #ffffff;
+      --rule:   #e7e5e4;
+      --rust:   #9a3412;
+      --max:    960px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .container { max-width: var(--max); margin: 0 auto; padding: 0 32px; }
+    hr { border: none; border-top: 1px solid var(--rule); margin: 0; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(250,249,247,.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--rule);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: var(--max); margin: 0 auto; padding: 16px 32px;
+    }
+    .nav-logo {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 17px; font-weight: normal; letter-spacing: .01em;
+      color: var(--ink);
+    }
+    .nav-logo span { color: var(--rust); }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a { font-size: 14px; color: var(--ink-2); transition: color .15s; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-contact {
+      font-size: 14px; color: var(--ink);
+      border-bottom: 1px solid var(--ink);
+      padding-bottom: 1px;
+    }
+    .nav-contact:hover { color: var(--rust); border-color: var(--rust); }
+
+    /* ── Hero ── */
+    #hero {
+      min-height: 100vh; display: flex; align-items: center;
+      padding-top: 72px; background: var(--white);
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 72px; align-items: center; padding: 64px 0;
+    }
+    .hero-kicker {
+      font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--ink-3); margin-bottom: 24px;
+    }
+    .hero-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(32px, 4.5vw, 52px);
+      font-weight: normal; line-height: 1.15;
+      letter-spacing: -.01em; margin-bottom: 24px; color: var(--ink);
+    }
+    .hero-desc {
+      font-size: 17px; color: var(--ink-2);
+      max-width: 420px; margin-bottom: 36px; line-height: 1.75;
+    }
+    .hero-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--ink); color: var(--white);
+      padding: 11px 26px; border: 1px solid var(--ink);
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: background .15s, color .15s;
+      letter-spacing: .01em;
+    }
+    .btn-primary:hover { background: var(--rust); border-color: var(--rust); }
+    .btn-text {
+      font-size: 14px; color: var(--ink-2);
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 1px; transition: color .15s, border-color .15s;
+    }
+    .btn-text:hover { color: var(--ink); border-color: var(--ink); }
+
+    /* ── Demo figure ── */
+    .demo-figure { }
+    .demo-frame {
+      background: var(--white);
+      border: 1px solid var(--rule);
+      box-shadow: 0 2px 24px rgba(0,0,0,.07);
+    }
+    .demo-chrome {
+      background: #f0eeec;
+      padding: 9px 14px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .chrome-dots { display: flex; gap: 5px; }
+    .chrome-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .cd-r { background: #ff5f57; } .cd-y { background: #febc2e; } .cd-g { background: #28c840; }
+    .chrome-url {
+      flex: 1; font-size: 11px; color: #777;
+      background: var(--white); border: 1px solid #ddd;
+      padding: 3px 10px;
+    }
+    .demo-article { padding: 20px 22px; }
+    .art-pub { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+    .art-hed {
+      font-family: Georgia, serif;
+      font-size: 17px; line-height: 1.3; color: var(--ink);
+      margin-bottom: 12px; font-weight: normal;
+    }
+    .art-byline { font-size: 10px; color: var(--ink-3); margin-bottom: 14px; border-bottom: 1px solid var(--rule); padding-bottom: 10px; }
+    .art-body { font-size: 12px; color: #333; line-height: 1.8; font-family: Georgia, serif; }
+
+    /* Highlights — the only color on the page */
+    .hl-low  { background: rgba(251,191,36,.28); border-bottom: 1.5px solid rgba(217,119,6,.6); padding: 0 1px; cursor: pointer; }
+    .hl-med  { background: rgba(234,88,12,.14);  border-bottom: 1.5px solid rgba(194,65,12,.6); padding: 0 1px; cursor: pointer; }
+    .hl-high { background: rgba(153,20,18,.13);  border-bottom: 1.5px solid rgba(127,15,15,.65); padding: 0 1px; cursor: pointer; }
+
+    /* Analysis panel */
+    .analysis-panel {
+      margin: 14px 0 0;
+      border: 1px solid var(--rule);
+      background: #faf9f7;
+      font-size: 11px;
+    }
+    .ap-header {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--rule);
+      font-size: 10px; color: var(--ink-3); letter-spacing: .05em;
+    }
+    .ap-claim {
+      padding: 8px 12px;
+      font-style: italic; color: var(--ink); font-size: 11px;
+      border-bottom: 1px solid var(--rule); font-family: Georgia, serif;
+    }
+    .ap-cols { display: flex; }
+    .ap-col { flex: 1; padding: 10px 12px; }
+    .ap-col + .ap-col { border-left: 1px solid var(--rule); }
+    .ap-col-head {
+      font-size: 9px; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .ap-for  .ap-col-head { color: #166534; }
+    .ap-against .ap-col-head { color: var(--rust); }
+    .ap-point { color: var(--ink-2); line-height: 1.55; margin-bottom: 4px; font-size: 10px; }
+    .ap-footer { padding: 6px 12px; border-top: 1px solid var(--rule); display: flex; align-items: center; gap: 6px; }
+    .ap-meter-label { font-size: 9px; color: var(--ink-3); letter-spacing: .05em; white-space: nowrap; }
+    .ap-bar { height: 3px; flex: 1; }
+    .ap-b1 { background: #fbbf24; } .ap-b2 { background: #f97316; }
+    .ap-b3 { background: #dc2626; } .ap-b4 { background: #7f1d1d; }
+
+    .demo-caption {
+      font-size: 12px; color: var(--ink-3); margin-top: 10px;
+      font-style: italic; text-align: center;
+    }
+
+    /* ── Sections ── */
+    section { padding: 88px 0; }
+    #problem  { background: var(--paper); }
+    #how      { background: var(--white); }
+    #audience { background: var(--paper); }
+    #status   { background: var(--white); }
+    #contact  { background: var(--paper); }
+
+    .section-hed {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: normal; line-height: 1.25;
+      letter-spacing: -.01em; margin-bottom: 20px;
+      color: var(--ink);
+    }
+    .section-body {
+      font-size: 16px; color: var(--ink-2);
+      max-width: 640px; line-height: 1.8;
+    }
+    .section-body p + p { margin-top: 16px; }
+
+    /* ── Problem ── */
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+
+    /* ── How it Works ── */
+    .how-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+    .how-steps { display: flex; flex-direction: column; gap: 0; }
+    .how-step {
+      display: grid; grid-template-columns: 32px 1fr;
+      gap: 20px; padding: 24px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .how-step:first-child { border-top: 1px solid var(--rule); }
+    .step-n {
+      font-family: Georgia, serif; font-size: 13px;
+      color: var(--ink-3); padding-top: 2px;
+    }
+    .step-body h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+    .step-body p { font-size: 14px; color: var(--ink-2); line-height: 1.7; }
+
+    /* ── Audience ── */
+    .audience-inner { max-width: 640px; }
+    .audience-list {
+      margin-top: 32px;
+      border-top: 1px solid var(--rule);
+    }
+    .audience-item {
+      display: grid; grid-template-columns: 160px 1fr;
+      gap: 24px; padding: 18px 0;
+      border-bottom: 1px solid var(--rule);
+      align-items: baseline;
+    }
+    .audience-role { font-size: 14px; font-weight: 600; color: var(--ink); }
+    .audience-desc { font-size: 14px; color: var(--ink-2); }
+
+    /* ── Status & Quotes ── */
+    .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+    .status-items { display: flex; flex-direction: column; gap: 0; margin-top: 32px; }
+    .status-item {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 16px 0; border-bottom: 1px solid var(--rule);
+    }
+    .status-item:first-child { border-top: 1px solid var(--rule); }
+    .si-mark { font-size: 12px; color: #166534; padding-top: 3px; }
+    .si-text h4 { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+    .si-text p  { font-size: 13px; color: var(--ink-2); }
+
+    .quotes-col {}
+    blockquote {
+      border-left: 2px solid var(--rule);
+      padding: 4px 0 4px 22px;
+      margin: 0;
+    }
+    blockquote + blockquote { margin-top: 32px; }
+    .bq-text {
+      font-family: Georgia, serif;
+      font-size: 17px; font-style: italic;
+      color: var(--ink); line-height: 1.7; margin-bottom: 10px;
+    }
+    .bq-attr { font-size: 13px; color: var(--ink-3); }
+    .bq-attr strong { color: var(--ink-2); font-weight: 600; }
+
+    /* ── Contact ── */
+    .contact-inner { max-width: 560px; }
+    .contact-inner .section-body { margin-bottom: 36px; }
+    .contact-form { display: flex; gap: 0; }
+    .contact-input {
+      flex: 1;
+      background: var(--white); border: 1px solid var(--rule);
+      border-right: none;
+      padding: 12px 16px; font-size: 14px; color: var(--ink);
+      outline: none; transition: border-color .15s;
+    }
+    .contact-input:focus { border-color: var(--ink-3); }
+    .contact-input::placeholder { color: var(--ink-3); }
+    .contact-note { font-size: 13px; color: var(--ink-3); margin-top: 14px; }
+    .contact-note a { color: var(--ink-2); border-bottom: 1px solid var(--rule); }
+    .contact-note a:hover { color: var(--ink); border-color: var(--ink); }
+
+    /* ── Footer ── */
+    footer { border-top: 1px solid var(--rule); padding: 28px 0; background: var(--white); }
+    .footer-inner {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .footer-logo {
+      font-family: Georgia, serif; font-size: 15px; color: var(--ink);
+    }
+    .footer-logo span { color: var(--rust); }
+    .footer-right { font-size: 12px; color: var(--ink-3); text-align: right; }
+
+    /* ── Responsive ── */
+    @media (max-width: 720px) {
+      .hero-grid, .problem-grid, .how-grid, .status-grid { grid-template-columns: 1fr; gap: 48px; }
+      .audience-item { grid-template-columns: 1fr; gap: 4px; }
+      .nav-links a:not(.nav-contact) { display: none; }
+      section { padding: 60px 0; }
+      .demo-figure { display: none; }
+      .hero-grid { padding: 48px 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">Content<span>-Verify</span></div>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#audience">Who it's for</a>
+        <a href="#status">Status</a>
+        <a href="#contact" class="nav-contact">Contact</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section id="hero">
+    <div class="container hero-grid">
+      <div>
+        <div class="hero-kicker">Chrome Extension · Ted Selker</div>
+        <h1 class="hero-title">Reading has always been one-sided.</h1>
+        <p class="hero-desc">
+          Content-Verify is a browser extension that identifies contested claims in what you're reading and surfaces the opposing evidence — without leaving the page.
+        </p>
+        <div class="hero-actions">
+          <a href="#contact" class="btn-primary">Request a Demo</a>
+          <a href="#how" class="btn-text">How it works</a>
+        </div>
+      </div>
+
+      <!-- Demo figure -->
+      <div class="demo-figure">
+        <div class="demo-frame">
+          <div class="demo-chrome">
+            <div class="chrome-dots">
+              <div class="chrome-dot cd-r"></div>
+              <div class="chrome-dot cd-y"></div>
+              <div class="chrome-dot cd-g"></div>
+            </div>
+            <div class="chrome-url">nytimes.com/opinion/economic-policy</div>
+          </div>
+          <div class="demo-article">
+            <div class="art-pub">The New York Times &nbsp;·&nbsp; Opinion</div>
+            <div class="art-hed">The Deficit and the Next Generation</div>
+            <div class="art-byline">Published today &nbsp;·&nbsp; Content-Verify active — 4 claims marked</div>
+            <div class="art-body">
+              <p>Economists broadly accept that <span class="hl-low">increased government spending stimulates growth</span> in developing economies. More disputed is the claim that <span class="hl-high">sustained deficit spending has no measurable negative impact on future generations</span> — a position cited frequently in recent policy debate.</p>
+              <br/>
+              <p>Proponents also hold that <span class="hl-med">free trade benefits both parties equally</span>, though evidence from trade-adjustment studies complicates this picture...</p>
+            </div>
+            <div class="analysis-panel">
+              <div class="ap-header">Content-Verify — claim analysis</div>
+              <div class="ap-claim">"sustained deficit spending has no measurable negative impact on future generations"</div>
+              <div class="ap-cols">
+                <div class="ap-col ap-for">
+                  <div class="ap-col-head">Supporting</div>
+                  <div class="ap-point">MMT economists: deficits fund productive investment and do not crowd out private capital in a sovereign currency system.</div>
+                  <div class="ap-point">Short-run stimulus literature finds no significant long-run debt drag at moderate levels.</div>
+                </div>
+                <div class="ap-col ap-against">
+                  <div class="ap-col-head">Opposing</div>
+                  <div class="ap-point">CBO projections link sustained primary deficits to lower future wages and reduced capital stock.</div>
+                  <div class="ap-point">Reinhart &amp; Rogoff (2010) and subsequent work identify growth headwinds above 90% debt-to-GDP.</div>
+                </div>
+              </div>
+              <div class="ap-footer">
+                <span class="ap-meter-label">Dispute intensity</span>
+                <div class="ap-bar ap-b1"></div>
+                <div class="ap-bar ap-b2"></div>
+                <div class="ap-bar ap-b3"></div>
+                <div class="ap-bar ap-b4"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-caption">Highlights and analysis panel as they appear in the browser.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- Problem -->
+  <section id="problem">
+    <div class="container problem-grid">
+      <div>
+        <h2 class="section-hed">The article you just read only told you one story.</h2>
+      </div>
+      <div class="section-body">
+        <p>Every publication has an editorial position. Every author has a point of view. Readers encounter contested claims daily — in news, in opinion, in academic preprints — with no indication that the claim is disputed or that a substantial counter-argument exists.</p>
+        <p>Wikipedia offers static dispute banners across 40 categories. They are passive, infrequent, and apply only within Wikipedia. Nothing comparable exists across the open web.</p>
+        <p>Content-Verify treats this as a reading infrastructure problem, not an AI novelty. It extends the critical apparatus that careful readers already apply — marginalia, fact-checking, source comparison — and makes it available at the moment of reading, on any page.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- How it works -->
+  <section id="how">
+    <div class="container how-grid">
+      <div>
+        <h2 class="section-hed">It works the way annotation has always worked.</h2>
+        <p class="section-body" style="margin-top:16px;">The extension runs in the background. There is nothing to configure. When you load a page, it reads alongside you.</p>
+      </div>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="step-n">I.</div>
+          <div class="step-body">
+            <h3>Detection</h3>
+            <p>The extension identifies 3–4 claims on the page where significant disagreement exists across the scholarly or editorial record. It does not mark every contested sentence — only those where the dispute is substantive.</p>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="step-n">II.</div>
+          <div class="step-body">
+            <h3>Marking</h3>
+            <p>Contested text is underlined in place, with color intensity indicating the degree of dispute — pale for moderate disagreement, deeper for strongly contested positions. The original text is unchanged and fully readable.</p>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="step-n">III.</div>
+          <div class="step-body">
+            <h3>Analysis</h3>
+            <p>Hovering a marked phrase opens a panel with the principal arguments on each side, drawn from the existing record of debate. The reader decides what to do with that information.</p>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="step-n">—</div>
+          <div class="step-body">
+            <h3>Compatible with most sites</h3>
+            <p>Works on Wikipedia, The New York Times, Fox News, CNN, The Atlantic, Substack, Reddit, and most publication or news sites. Users can exclude sites where the extension is not useful.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- Audience -->
+  <section id="audience">
+    <div class="container">
+      <div class="audience-inner">
+        <h2 class="section-hed">For anyone who reads to form an opinion.</h2>
+        <p class="section-body" style="margin-top:16px;">Content-Verify requires no change in reading habits. It is most useful where the stakes of misreading are highest.</p>
+        <div class="audience-list">
+          <div class="audience-item">
+            <div class="audience-role">News readers</div>
+            <div class="audience-desc">Context and counter-argument at the moment of reading, across partisan and non-partisan sources alike.</div>
+          </div>
+          <div class="audience-item">
+            <div class="audience-role">Students</div>
+            <div class="audience-desc">Immediate indication of where a source's claims diverge from the broader scholarly record — useful at every level from secondary school through graduate research.</div>
+          </div>
+          <div class="audience-item">
+            <div class="audience-role">Researchers</div>
+            <div class="audience-desc">Rapid orientation to the dispute landscape of a claim during literature review, without leaving the document.</div>
+          </div>
+          <div class="audience-item">
+            <div class="audience-role">Publishers</div>
+            <div class="audience-desc">An instrument for opinion and editorial pages that demonstrates commitment to presenting the full range of serious argument.</div>
+          </div>
+          <div class="audience-item">
+            <div class="audience-role">Organizations</div>
+            <div class="audience-desc">Deployable across knowledge worker populations — 100M+ in the US — as part of information literacy programs.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- Status -->
+  <section id="status">
+    <div class="container status-grid">
+      <div>
+        <h2 class="section-hed">The extension works today.</h2>
+        <p class="section-body" style="margin-top:16px; margin-bottom:0;">Available for demo. Partnerships, licensing agreements, and investment discussions welcome.</p>
+        <div class="status-items">
+          <div class="status-item">
+            <div class="si-mark">✓</div>
+            <div class="si-text">
+              <h4>Chrome extension — functional</h4>
+              <p>Working on most websites. Contact for immediate demo.</p>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="si-mark">✓</div>
+            <div class="si-text">
+              <h4>User evaluation — completed</h4>
+              <p>Highlights demonstrably increase engagement with alternative perspectives. Users keep the extension enabled.</p>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="si-mark">◦</div>
+            <div class="si-text">
+              <h4>2 research papers — in preparation</h4>
+              <p>Formal evaluation of effectiveness and behavioral outcomes.</p>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="si-mark">◦</div>
+            <div class="si-text">
+              <h4>Firefox, Safari, Edge — in development</h4>
+              <p>Additional browser support planned.</p>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="si-mark">◦</div>
+            <div class="si-text">
+              <h4>2 patents — planned</h4>
+              <p>IP filing for detection and presentation methodology underway.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quotes-col" style="padding-top: 8px;">
+        <blockquote>
+          <p class="bq-text">"We love it and would work with you if our readers pushed for it."</p>
+          <p class="bq-attr"><strong>Jimmy Wales</strong> — Co-founder, Wikipedia</p>
+        </blockquote>
+        <blockquote>
+          <p class="bq-text">"[Content-Verify would] transform [the] NYT opinion page."</p>
+          <p class="bq-attr"><strong>John Markoff</strong> — Technology Writer, The New York Times</p>
+        </blockquote>
+        <div style="margin-top:36px; padding:24px; border:1px solid var(--rule); background:var(--paper);">
+          <p style="font-size:13px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.08em; margin-bottom:12px;">Access model</p>
+          <p style="font-size:14px; color:var(--ink-2); line-height:1.75;">Highlights available free. Supporting and opposing analysis accessible via subscription or institutional license. Publisher and enterprise licensing available separately.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- Contact -->
+  <section id="contact">
+    <div class="container">
+      <div class="contact-inner">
+        <h2 class="section-hed">Request a demonstration.</h2>
+        <div class="section-body">
+          <p>The extension is available now. Leave your email and we will arrange a walkthrough, or write directly.</p>
+        </div>
+        <div class="contact-form" style="margin-top:28px;">
+          <input class="contact-input" type="email" placeholder="your@email.com" />
+          <button class="btn-primary" onclick="handleSubmit(event)">Request Demo</button>
+        </div>
+        <p class="contact-note">
+          Or write directly to <a href="mailto:Ted.Selker@gmail.com">Ted.Selker@gmail.com</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-inner">
+      <div class="footer-logo">Content<span>-Verify</span></div>
+      <div class="footer-right">
+        Ted Selker &nbsp;·&nbsp; © 2026 &nbsp;·&nbsp; Confidential
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Nav active state
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(s => { if (window.scrollY >= s.offsetTop - 100) current = s.id; });
+      navLinks.forEach(a => {
+        a.style.color = a.getAttribute('href') === `#${current}` ? 'var(--ink)' : '';
+      });
+    });
+
+    // Contact form
+    function handleSubmit(e) {
+      e.preventDefault();
+      const input = document.querySelector('.contact-input');
+      const btn = e.target;
+      if (!input.value || !input.value.includes('@')) {
+        input.style.borderColor = '#9a3412'; return;
+      }
+      btn.textContent = 'Sent';
+      btn.style.background = '#166534';
+      btn.style.borderColor = '#166534';
+      input.value = '';
+      setTimeout(() => {
+        btn.textContent = 'Request Demo';
+        btn.style.background = '';
+        btn.style.borderColor = '';
+      }, 4000);
+    }
+
+    // Gentle fade-in on scroll
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'none';
+        }
+      });
+    }, { threshold: 0.06 });
+    document.querySelectorAll('.how-step, .audience-item, .status-item').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(10px)';
+      el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
