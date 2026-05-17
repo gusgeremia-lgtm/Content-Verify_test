@@ -51,8 +51,8 @@ export default async function handler(req, res) {
 
   try {
     const { error } = await resend.emails.send({
-      from: process.env.RESEND_FROM || 'Content-Verify <onboarding@resend.dev>',
-      to: ['ted.selker@gmail.com'],
+      from: 'onboarding@resend.dev',
+      to: ['gusgeremia@gmail.com'],
       replyTo: email,
       subject,
       text,
